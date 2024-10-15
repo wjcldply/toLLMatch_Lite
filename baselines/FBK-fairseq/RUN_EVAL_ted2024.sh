@@ -1,7 +1,7 @@
 #!/bin/bash
 sleep 3
 OUTPUT_DIR=results/ende
-PATH_TO_PROJECT_ROOT=<ABS_PATH_TO_PROJECT_ROOT>
+PATH_TO_PROJECT_ROOT=/workspace/toLLMatch_Lite
 simuleval \
     --agent $PATH_TO_PROJECT_ROOT/baselines/FBK-fairseq/examples/speech_to_text/simultaneous_translation/agents/v1_0/simul_offline_edatt.py \
     --source $PATH_TO_PROJECT_ROOT/evaluation/SOURCES/ted_tst_2024_102 \

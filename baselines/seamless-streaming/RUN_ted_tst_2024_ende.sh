@@ -2,7 +2,7 @@
 
 # change the target language in `--data-file` to de/es/it/fr/ru and `--tgt-lang` to `deu/spa/ita/fra/rus`
 
-ABS_PATH_TO_PROJECT_ROOT=<ABS_PATH_TO_PROJECT_ROOT> # specify abs path to toLLMmatch
+ABS_PATH_TO_PROJECT_ROOT=/workspace/toLLMatch_Lite # specify abs path to toLLMmatch
 END_INDEX=2
 streaming_evaluate \
     --task s2tt \

@@ -43,3 +43,4 @@ simuleval_link
 !*.tsv
 
 *.pt
+.env

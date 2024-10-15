@@ -16,7 +16,7 @@ import sys
 import torch
 import torch.nn.functional as F
 
-sys.path.append("PROJECT_ROOT/baselines/FBK-fairseq")
+sys.path.append("/workspace/toLLMatch_Lite/baselines/FBK-fairseq")
 
 from examples.speech_to_text.simultaneous_translation.agents.base_simulst_agent import BaseSimulSTAgent
 from examples.speech_to_text.simultaneous_translation.agents.v1_0.base_simulst_agent import FairseqSimulSTAgent
