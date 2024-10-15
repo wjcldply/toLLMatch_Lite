@@ -1,0 +1,2 @@
+BLEU	CHRF	LAAL	AL	AP	DAL	TIME	RTF1	WER	min_read_time	min_lag_words	src_seg_sz	use_asr_api	asr_model_size	k	dir	output	use_api	model_id	end_index	prompt_id	background	func_wrds	priming
+29.445	0.0	1875.684	1707.682	0.767	2129.402	10.705010652542114	0.9490257670693363	0.0	1.4	1	200	True	small	1	en-es	ONLINE_TARGETS/out_EVAL_ENDE_S2TT_TED2024_Lite.sh_4	True	meta-llama/Meta-Llama-3-8B-Instruct	2	1	BACKGROUND_INFO/ted_tst_2024.txt	_	True

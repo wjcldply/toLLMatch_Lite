@@ -70,6 +70,17 @@ python asr_server_distil.py \
     --port <PORT> # must match the port in `ASR_SERVER_ENDPOINT_URL`
 ```
 
+### Using Single RTX3090 with 24GB ram to run Whisper-Small
+```
+cd evaluation
+
+python asr_server.py \
+    --model_size small \
+    --device 0 \
+    --port 5001
+```
+
+
 
 ## 3 Spin up the LLM inference server
 
@@ -85,6 +96,20 @@ python3 -m vllm.entrypoints.api_server \
     --tensor-parallel-size 8 \
     --download-dir $volume \
     --max-num-seqs 2
+```
+### Using Single RTX3090 with 24GB ram to run LLaMA3.1-8B-Instruct with FP16
+```
+cd evaluation
+volume=/root/.cache/huggingface
+LLM_MODEL=meta-llama/Meta-Llama-3-8B-Instruct
+
+CUDA_VISIBLE_DEVICES=1 python3 -m vllm.entrypoints.api_server \
+    --model $LLM_MODEL \
+    --port 8001 \
+    --tensor-parallel-size 1 \
+    --download-dir $volume \
+    --max-num-seqs 2 \
+    --dtype float16
 ```
 
 Specify `--tensor-parallel-size 1` with a small model (e.g. `meta-llama/Meta-Llama-3-8B-Instruct`) to be sure nothing breaks. 

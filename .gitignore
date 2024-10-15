@@ -21,7 +21,7 @@ lightning_logs/*
 notebooks/experiments/*
 experiments/*
 models/*
-evaluation/ONLINE_TARGETS/*
+# evaluation/ONLINE_TARGETS/*
 evaluation/METRICS.json
 evaluation/S2T_METRICS.json
 evaluation/METRICS_dedupe.json
