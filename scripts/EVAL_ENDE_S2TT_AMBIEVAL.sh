@@ -14,7 +14,7 @@ ID=0
 END_INDEX=2
 
 cd ../evaluation
-find ./ONLINE_TARGETS -type d -name "out_*" -exec rm -rf {} +
+# find ./ONLINE_TARGETS -type d -name "out_*" -exec rm -rf {} +
 for FUNC_WORDS in "${FUNC_WORDS_LIST[@]}"; do
     for K in 1; do
         for MIN_READ_TIME in 0.6 1.2 ; do

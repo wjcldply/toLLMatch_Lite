@@ -18,35 +18,35 @@ cd ../evaluation
 # find ./ONLINE_TARGETS -type d -name "out_*" -exec rm -rf {} +
 
 # TED-TST-2023 Testings
-for TGT_LANG in de; do
-    for FUNC_WORDS in "${FUNC_WORDS_LIST[@]}"; do
-        echo $FUNC_WORDS
-        for K in 1; do
-            simuleval \
-                --source SOURCES/src_ted_new_tst_100.$TGT_LANG \
-                --target OFFLINE_TARGETS/tgt_ted_new_tst_100.$TGT_LANG \
-                --background BACKGROUND_INFO/bgd_ted_new_tst_100_brief.$TGT_LANG \
-                --agent s2tt_agent.py \
-                --k $K \
-                --output ONLINE_TARGETS/out_${0}_TED2023_${TGT_LANG} \
-                --start-index 0 \
-                --end-index $END_INDEX_2023 \
-                --verbose \
-                --dir en-$TGT_LANG \
-                --use_api \
-                --latency-metrics LAAL AL AP DAL \
-                --quality-metrics BLEU CHRF \
-                --model_id meta-llama/Meta-Llama-3-70B-Instruct \
-                --source-segment-size 200 \
-                --use_asr_api \
-                --asr_model_size $ASR_MODEL \
-                --prompt_id 1 \
-                --func_wrds $FUNC_WORDS \
-                --priming
-            ID=$((ID+1))
-        done
-    done
-done
+# for TGT_LANG in de; do
+#     for FUNC_WORDS in "${FUNC_WORDS_LIST[@]}"; do
+#         echo $FUNC_WORDS
+#         for K in 1; do
+#             simuleval \
+#                 --source SOURCES/src_ted_new_tst_100.$TGT_LANG \
+#                 --target OFFLINE_TARGETS/tgt_ted_new_tst_100.$TGT_LANG \
+#                 --background BACKGROUND_INFO/bgd_ted_new_tst_100.$TGT_LANG \
+#                 --agent s2tt_agent.py \
+#                 --k $K \
+#                 --output ONLINE_TARGETS/out_${0}_TED2023_${TGT_LANG} \
+#                 --start-index 0 \
+#                 --end-index $END_INDEX_2023 \
+#                 --verbose \
+#                 --dir en-$TGT_LANG \
+#                 --use_api \
+#                 --latency-metrics LAAL AL AP DAL \
+#                 --quality-metrics BLEU CHRF \
+#                 --model_id meta-llama/Meta-Llama-3-70B-Instruct \
+#                 --source-segment-size 200 \
+#                 --use_asr_api \
+#                 --asr_model_size $ASR_MODEL \
+#                 --prompt_id 1 \
+#                 --func_wrds $FUNC_WORDS \
+#                 --priming
+#             ID=$((ID+1))
+#         done
+#     done
+# done
 
 # TED-TST-2024 Testings
 for TGT_LANG in de fr es ru it; do
@@ -62,7 +62,7 @@ for TGT_LANG in de fr es ru it; do
                     --k $K \
                     --output ONLINE_TARGETS/out_${0}_TED2024_${TGT_LANG}_Background_Priming \
                     --start-index 0 \
-                    --end-index $END_INDEX_2023 \
+                    --end-index $END_INDEX \
                     --verbose \
                     --dir en-$TGT_LANG \
                     --use_api \
@@ -86,7 +86,7 @@ for TGT_LANG in de fr es ru it; do
                     --k $K \
                     --output ONLINE_TARGETS/out_${0}_TED2024_${TGT_LANG}_Priming \
                     --start-index 0 \
-                    --end-index $END_INDEX_2023 \
+                    --end-index $END_INDEX \
                     --verbose \
                     --dir en-$TGT_LANG \
                     --use_api \
@@ -111,7 +111,7 @@ for TGT_LANG in de fr es ru it; do
                     --k $K \
                     --output ONLINE_TARGETS/out_${0}_TED2024_${TGT_LANG}_Background \
                     --start-index 0 \
-                    --end-index $END_INDEX_2023 \
+                    --end-index $END_INDEX \
                     --verbose \
                     --dir en-$TGT_LANG \
                     --use_api \

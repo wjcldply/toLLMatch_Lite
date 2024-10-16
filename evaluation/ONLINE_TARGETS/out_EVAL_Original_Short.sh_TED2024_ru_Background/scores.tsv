@@ -1,0 +1,2 @@
+BLEU	CHRF	LAAL	AL	AP	DAL	TIME	RTF1	WER	min_read_time	min_lag_words	src_seg_sz	use_asr_api	asr_model_size	k	dir	output	use_api	model_id	end_index	prompt_id	background	func_wrds	priming
+22.953	4.269	1763.939	1632.293	0.55	2488.275	503.3195798397064	5.343095327385418	5.64	1.4	1	200	True	distil-large-v3	1	en-ru	ONLINE_TARGETS/out_EVAL_Original_Short.sh_TED2024_ru_Background	True	meta-llama/Meta-Llama-3-70B-Instruct	10	1	BACKGROUND_INFO/ted_tst_2024.txt	_	False

@@ -23,7 +23,7 @@ ID=0
 END_INDEX=2
 
 cd ../evaluation
-find ./ONLINE_TARGETS -type d -name "out_*" -exec rm -rf {} +
+# find ./ONLINE_TARGETS -type d -name "out_*" -exec rm -rf {} +
 for TGT_LANG in de; do
     for WAIT_K in 1; do
         for PROMPT_ID in 1; do
