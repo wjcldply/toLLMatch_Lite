@@ -80,6 +80,15 @@ python asr_server.py \
     --port 5001
 ```
 
+### Using Single A100 with 80GB ram to run Whisper-Distil-Large-V3
+```
+cd evaluation
+
+python asr_server.py \
+    --model_size distil-large-v3 \
+    --device 0 \
+    --port 5001
+```
 
 
 ## 3 Spin up the LLM inference server
@@ -97,6 +106,9 @@ python3 -m vllm.entrypoints.api_server \
     --download-dir $volume \
     --max-num-seqs 2
 ```
+
+Specify `--tensor-parallel-size 1` with a small model (e.g. `meta-llama/Meta-Llama-3-8B-Instruct`) to be sure nothing breaks. 
+
 ### Using Single RTX3090 with 24GB ram to run LLaMA3.1-8B-Instruct with FP16
 ```
 cd evaluation
@@ -112,7 +124,20 @@ CUDA_VISIBLE_DEVICES=1 python3 -m vllm.entrypoints.api_server \
     --dtype float16
 ```
 
-Specify `--tensor-parallel-size 1` with a small model (e.g. `meta-llama/Meta-Llama-3-8B-Instruct`) to be sure nothing breaks. 
+### Using 4 A100s with 80GB ram each to run LLaMA3.1-70B-Instruct with FP32
+```
+cd evaluation
+volume=/root/.cache/huggingface
+LLM_MODEL=meta-llama/Meta-Llama-3-70B-Instruct
+
+CUDA_VISIBLE_DEVICES=1,2,3,4 python3 -m vllm.entrypoints.api_server \
+    --model $LLM_MODEL \
+    --port 8001 \
+    --tensor-parallel-size 4 \
+    --download-dir $volume \
+    --max-num-seqs 2 \
+    --dtype float32
+```
 
 ## 4 Run evaluation
 
@@ -128,6 +153,18 @@ bash EVAL_ENDE_S2TT_TED2024.sh
 ```
 
 Modify the paths in `EVAL_ENDE_TED2024.sh` if you want to evaluate the method on other data, language pairs, LLM size, ASR model size, in a different latency regime, or on a specified subset of the data, adjust the corresponding parameters in the script.
+
+### Speech-to-text (S2TT) : Paper Reproduction (Ted-Tst-2023 & 2024; LLaMA3-70B)
+```bash
+cd scripts
+bash EVAL_Original.sh
+```
+
+### Speech-to-text (S2TT) : Paper Reproduction (Ted-Tst-2024; LLaMA3-8B)
+```bash
+cd scripts
+bash EVAL_Lite.sh
+```
 
 ### Text-to-text (T2TT)
 
