@@ -27,7 +27,7 @@ for TGT_LANG in de fr es ru it; do
                     --target OFFLINE_TARGETS/ted_tst_2024_$TGT_LANG.txt \
                     --agent s2tt_agent.py \
                     --k $K \
-                    --output ONLINE_TARGETS/out_${0}_${ID} \
+                    --output ONLINE_TARGETS/out_${0}_${ID}_${TGT_LANG}_w_Background \
                     --start-index 0 \
                     --end-index $END_INDEX \
                     --verbose \
@@ -51,7 +51,7 @@ for TGT_LANG in de fr es ru it; do
                     --target OFFLINE_TARGETS/ted_tst_2024_$TGT_LANG.txt \
                     --agent s2tt_agent.py \
                     --k $K \
-                    --output ONLINE_TARGETS/out_${0}_${ID} \
+                    --output ONLINE_TARGETS/out_${0}_${ID}_${TGT_LANG}_wo_Background \
                     --start-index 0 \
                     --end-index $END_INDEX \
                     --verbose \
