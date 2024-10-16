@@ -15,7 +15,7 @@ END_INDEX_2023=102
 ID=0
 
 cd ../evaluation
-find ./ONLINE_TARGETS -type d -name "out_*" -exec rm -rf {} +
+# find ./ONLINE_TARGETS -type d -name "out_*" -exec rm -rf {} +
 
 # TED-TST-2023 Testings
 for TGT_LANG in de; do
@@ -30,7 +30,7 @@ for TGT_LANG in de; do
                 --k $K \
                 --output ONLINE_TARGETS/out_${0}_TED2023_${TGT_LANG} \
                 --start-index 0 \
-                --end-index $END_INDEX \
+                --end-index $END_INDEX_2023 \
                 --verbose \
                 --dir en-$TGT_LANG \
                 --use_api \
@@ -62,7 +62,7 @@ for TGT_LANG in de fr es ru it; do
                     --k $K \
                     --output ONLINE_TARGETS/out_${0}_TED2024_${TGT_LANG}_Background_Priming \
                     --start-index 0 \
-                    --end-index $END_INDEX \
+                    --end-index $END_INDEX_2023 \
                     --verbose \
                     --dir en-$TGT_LANG \
                     --use_api \
@@ -86,7 +86,7 @@ for TGT_LANG in de fr es ru it; do
                     --k $K \
                     --output ONLINE_TARGETS/out_${0}_TED2024_${TGT_LANG}_Priming \
                     --start-index 0 \
-                    --end-index $END_INDEX \
+                    --end-index $END_INDEX_2023 \
                     --verbose \
                     --dir en-$TGT_LANG \
                     --use_api \
@@ -111,7 +111,7 @@ for TGT_LANG in de fr es ru it; do
                     --k $K \
                     --output ONLINE_TARGETS/out_${0}_TED2024_${TGT_LANG}_Background \
                     --start-index 0 \
-                    --end-index $END_INDEX \
+                    --end-index $END_INDEX_2023 \
                     --verbose \
                     --dir en-$TGT_LANG \
                     --use_api \

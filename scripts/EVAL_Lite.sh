@@ -15,7 +15,7 @@ ID=0
 
 
 cd ../evaluation
-find ./ONLINE_TARGETS -type d -name "out_*" -exec rm -rf {} +
+# find ./ONLINE_TARGETS -type d -name "out_*" -exec rm -rf {} +
 for TGT_LANG in de fr es ru it; do
     for FUNC_WORDS in "${FUNC_WORDS_LIST[@]}"; do
         echo $FUNC_WORDS
