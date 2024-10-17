@@ -3,6 +3,7 @@
 **Paper**: https://arxiv.org/abs/2406.13476
 
 ![asdf](assets/output.gif)
+![asdf](assets/output_reproduce.gif)
 
 # Abstract
 
