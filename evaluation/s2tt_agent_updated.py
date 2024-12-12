@@ -204,8 +204,21 @@ def get_last_word(outputs, prompt):
 
 
 def build_full_prompt(partial_source, partial_target, background=None):
+    ############################################################################
+    if isinstance(background, dict):  # If background is a dictionary, convert it to a formatted string
+        background_str = ", ".join(f"{k}: {v}" for k, v in background.items())
+    else:
+        background_str = background or ""
+    ############################################################################
 
-    DEFAULT_SYSTEM_PROMPT = PROMPT_TEMPLATES[PROMPT_ID](SRC_LANG=SRC_LANG, TARG_LANG=TARG_LANG, BGD_INFO=background)
+    DEFAULT_SYSTEM_PROMPT = PROMPT_TEMPLATES[PROMPT_ID](
+        SRC_LANG=SRC_LANG, 
+        TARG_LANG=TARG_LANG, 
+        ############################################################################
+        # BGD_INFO=background
+        BGD_INFO=background_str  # Use the formatted background string
+        ############################################################################
+    )
 
     if ACCEPTS_SYSTEM_MESSAGE:  # 시스템메세지 따로 받는 모델인 경우에 대응하기 위함
         messages = [
@@ -241,6 +254,17 @@ sampling_params = SamplingParams(
     # top_p=0.95,
 )
 
+normal_generation_params = SamplingParams(
+    temperature=0.5,
+    min_tokens=2,
+    max_tokens=100,
+    stop=[";"],
+    include_stop_str_in_output=True,
+    # use_beam_search=True,
+    # best_of=3,
+    top_p=0.95,
+)
+
 
 class Translator:
 
@@ -249,7 +273,299 @@ class Translator:
         self.flags = dict(consecutive_duplicates=0)  # no idea
         self.generation_kwargs = generation_kwargs  # generation arguments to pass to LLMs
         self.FUNCTION_WORDS = function_words  # words w/ no semantic/lexical purpose (e.g. a, the, umm, etc.)
-        self.background = None  # whether or not background information was provided
+        self.background = None
+        
+        ############################################################################
+        self.history_words = None
+        self.background_dict = {
+            "topic": "",
+            "named_entities": []
+        }
+        self.background_subjects_set = set()
+        self.MAX_NAMED_ENTITIES = 50  # Limit total named entities
+        self.MAX_NEW_ENTITIES_PER_UPDATE = 2  # Maximum new entities to add per update
+        ############################################################################
+
+    ############################################################################
+    def generate_background_info(self, new_source_context):
+        """
+        Generate comprehensive background information for the entire context in two steps:
+        1. Generate a topic string.
+        2. Generate named entities.
+        """
+        
+        # Step 1: Generate a simple topic string
+        topic_prompt = f"""
+        You are an advanced knowledge extraction AI specializing in comprehensive contextual analysis.
+        Generate a concise(under 15 words) overarching topic from the given transcript.
+        
+        Transcript
+        "{' '.join(self.history_words)} {new_source_context}"
+
+        IMPORTANT
+        Answer with just the topic, and Nothing more. Don't Explain or Elaborate. Simply write the topic as it is.
+        When answering, Don't add notes or explanations and stick to formats.
+        
+        Topic you suggest should follow formats below.
+        Answer: Specific Explanation of Core Idea of Content from Transcript;
+
+        If There are not enough information to conclude the topic, simply answer with a single semicolon like below.
+        Answer: ;
+        
+        """
+
+        try:
+            # Generate response for the topic
+            # print(f"TR PROMPT: {topic_prompt}")
+            topic_response = self.___generate(topic_prompt).lstrip()
+            if topic_response.startswith("Answer: "):
+                topic_response = topic_response[len("Answer: "):-1]
+            topic = topic_response.strip()
+            print(f"TR: {topic}")
+
+            # Step 2: Generate named entities
+            named_entities_prompt = f"""
+            You are an advanced knowledge extraction AI specializing in entity recognition and description.
+            Identify up to 3 specific,challenging,significant entities that are either mentioned OR highly related to the given transcript.
+            Find at least 1 entity that's not mentioned in Transcript explicitly, but is likely to be brought up soon.
+            Include figures, places, concepts, key personalities, organizations, etc. 
+            For each entity, provide a concise, informative one-line description.
+            Don't answer with Entities that are already identified.
+
+            Already Identified Entities are {'/'.join([entity['entity'] for entity in self.background_dict.get('named_entities', [])])}
+            
+            Transcript
+            "{' '.join(self.history_words)} {new_source_context}"
+            
+            Answer in the format of each entity and description listed in alternation, with / separating each and a semicolon at the end.
+            When answering, Don't add notes or explanations. Stick to formats.
+            
+            Your Answers MUST follow formats below.
+            Answer: entity1/description of entity1/entity2/description of entity2;
+
+            If There are nothing to identify, simply answer with a single semicolon like below.
+            Answer: ;
+            """
+            """Existing Named Entities: {', '.join([entity['entity'] for entity in self.background_dict.get('named_entities', [])])}"""
+
+            # Generate response for named entities
+            # print(f"NER PROMPT: {named_entities_prompt}")
+            named_entities_response = self.___generate(named_entities_prompt).strip()
+            if named_entities_response != "":
+                if named_entities_response.startswith("Answer: "):
+                    named_entities_response = named_entities_response[len("Answer: "):-1]
+                if named_entities_response.endswith("/"):
+                    named_entities_response = named_entities_response[:-1]
+                named_entities = named_entities_response.lower().strip().split("/")
+                print(f"NER: {named_entities_response}")
+
+                # Limit the number of named entities
+                named_entities = named_entities[:self.MAX_NEW_ENTITIES_PER_UPDATE*2]
+                # Construct the final background dictionary
+                final_background = {
+                    "topic": topic,
+                    # "named_entities": [{"entity": entity, "description": "Description not available"} for entity in named_entities]
+                    # "named_entities": named_entities
+                    "named_entities" : [
+                        {"entity": named_entities[i], "description": named_entities[i + 1]}
+                        for i in range(0, len(named_entities), 2)
+                    ]
+                }
+            else:
+                named_entities = None
+                # Construct the final background dictionary
+                final_background = {
+                    "topic": topic,
+                    "named_entities" : []
+                }
+            return final_background
+        except Exception as e:
+            print(f"Error generating background info: {e}")
+            return {"topic": "", "named_entities": []}
+
+    def update_background_info(self, new_source_words):
+        """
+        Update background information dictionary
+        """
+        # Filter out function words
+        filtered_words = [
+            word for word in new_source_words 
+            if word.lower() not in self.FUNCTION_WORDS
+        ]
+
+        # If no new meaningful words, skip update
+        if not filtered_words:
+            return
+
+        # Join filtered words into a single context string
+        new_source_context = " ".join(filtered_words)
+
+        # Generate new background information
+        new_background = self.generate_background_info(new_source_context)
+
+        # Update topic if not empty
+        if new_background.get("topic"):
+            self.background_dict["topic"] = new_background["topic"]
+
+        # Update named entities
+        for new_entity in new_background.get("named_entities", []):
+            new_entity['entity'] = new_entity['entity'].strip()
+            # Check if entity already exists
+            if not any(
+                existing['entity'] == new_entity['entity'] or new_entity['entity'] in existing['entity'] or existing['entity'] in new_entity['entity']
+                for existing in self.background_dict['named_entities']
+            ):
+                if ":" not in new_entity['entity'] and len(new_entity['entity'])<100:
+                    # Ensure we don't exceed max entities
+                    if len(self.background_dict['named_entities']) >= self.MAX_NAMED_ENTITIES:
+                        # Remove the oldest entity
+                        self.background_dict['named_entities'].pop(0)
+                    
+                    # Add new entity
+                    self.background_dict['named_entities'].append(new_entity)
+
+        # Update the background as a string for compatibility
+        self.background = str(self.background_dict)
+    # def generate_background_info(self, new_source_context):
+    #     """
+    #     Generate comprehensive background information for the entire context
+    #     """
+    #     # Prepare existing context from current background
+    #     existing_entities = "; ".join(
+    #         f"{entity['entity']}: {entity['description']}" 
+    #         for entity in self.background_dict.get("named_entities", [])
+    #     )
+        
+    #     # Comprehensive prompt for extracting topic and named entities
+    #     background_prompt = f"""
+    #     You are an advanced knowledge extraction AI specializing in comprehensive contextual analysis.
+
+    #     Existing Context:
+    #     Topic: {self.background_dict.get('topic', 'N/A')}
+    #     Existing Entities: {existing_entities}
+
+    #     New Input Context:
+    #     {new_source_context}
+
+    #     Your Complex Tasks:
+    #     1. Generate an Overarching Topic:
+    #        - Craft a concise, intellectually engaging topic that encapsulates 
+    #          the broader thematic connections in the given context
+    #        - Must be broader than the specific input
+    #        - Maximum 12-15 words
+
+    #     2. Identify NEW Named Entities:
+    #        - Select up to 3 most significant entities NOT already in existing context
+    #        - Include historical figures, places, concepts, or key personalities
+    #        - Ensure entities are contextually relevant and intellectually meaningful
+
+    #     3. For Each Entity:
+    #        - Provide a crisp, informative one-line description
+    #        - Focus on their core significance, historical impact, or conceptual importance
+    #        - Maximum 15 words per description
+    #     """
+    #     background_prompt += """
+    #     Output Format (Strict JSON):
+    #     {
+    #         "topic": "Overarching Intellectual Theme",
+    #         "named_entities": [
+    #             {
+    #                 "entity": "Entity Name",
+    #                 "description": "Concise, Meaningful Description"
+    #             },
+    #             ...
+    #         ]
+    #     }
+    #     """
+
+    #     # Perform single LLM inference
+    #     try:
+    #         import json
+            
+    #         # Generate response
+    #         response = self.__generate(background_prompt)
+            
+    #         # Attempt to parse JSON
+    #         parsed_response = json.loads(response)
+            
+    #         return parsed_response
+    #     except Exception as e:
+    #         print(f"Error generating background info: {e}")
+    #         return {"topic": "", "named_entities": []}
+
+    # def update_background_info(self, new_source_words):
+    #     """
+    #     Update background information dictionary
+    #     """
+    #     # Filter out function words
+    #     filtered_words = [
+    #         word for word in new_source_words 
+    #         if word.lower() not in self.FUNCTION_WORDS
+    #     ]
+
+    #     # If no new meaningful words, skip update
+    #     if not filtered_words:
+    #         return
+
+    #     # Join filtered words into a single context string
+    #     new_source_context = " ".join(filtered_words)
+
+    #     # Generate new background information
+    #     new_background = self.generate_background_info(new_source_context)
+
+    #     # Update topic if not empty
+    #     if new_background.get("topic"):
+    #         self.background_dict["topic"] = new_background["topic"]
+
+    #     # Update named entities
+    #     for new_entity in new_background.get("named_entities", []):
+    #         # Check if entity already exists
+    #         if not any(
+    #             existing['entity'] == new_entity['entity'] 
+    #             for existing in self.background_dict['named_entities']
+    #         ):
+    #             # Ensure we don't exceed max entities
+    #             if len(self.background_dict['named_entities']) >= self.MAX_NAMED_ENTITIES:
+    #                 # Remove the oldest entity
+    #                 self.background_dict['named_entities'].pop(0)
+                
+    #             # Add new entity
+    #             self.background_dict['named_entities'].append(new_entity)
+
+    #     # Update the background as a string for compatibility
+    #     self.background = str(self.background_dict)
+    def ___generate(self, prompt, get_more_tokens=False):
+        if args.use_api:
+            prompt_len = len(prompt)
+            payload = {"prompt": prompt}
+            payload.update(
+                {
+                    k: v
+                    for k, v in normal_generation_params.__dict__.items()
+                    if k
+                    in [
+                        "temperature",
+                        "min_tokens",
+                        "max_tokens",
+                        "stop",
+                        "include_stop_str_in_output",
+                        # "use_beam_search",
+                        # "best_of",
+                    ]
+                }
+            )
+
+            # set min_tokens to 3 when requested (e.g. a single whitespace is generated)
+            payload["min_tokens"] = 3 if get_more_tokens else normal_generation_params.min_tokens
+            response = requests.post(ENDPOINT, json=payload)
+            # pdb.set_trace()
+            return json.loads(response.text)["text"][0][prompt_len:].replace("\n", "")  # generation 결과물에서 new-line 없애줌
+
+        else:
+            result = llm.generate(prompts=[prompt], use_tqdm=False, sampling_params=normal_generation_params)  # 걍 프롬프트로 generate()
+            return result[0].outputs[0].text.replace("\n", "")  # generation 결과물에서 new-line 없애줌
+    ############################################################################
+
 
     def __generate(self, prompt, get_more_tokens=False):
         if args.use_api:
@@ -302,8 +618,8 @@ class Translator:
 
         # detect if <|start_header_id|> is generated, chop off what's after it (Llama-3 + ASR specific)
         if "<|start_header_id|>" in just_generated:  # 라마3 계열에서 <|start_header_id|> 토큰이 생성되는 경우에 대응
-            # self.flags["stop_reason"] = just_generated.split("<|start_header_id|>")[0]  # WTF
-            self.flags["last_word"] = just_generated.split("<|start_header_id|>")[0]  # 뭔가 잘못된거같아서 수정함
+            self.flags["stop_reason"] = just_generated.split("<|start_header_id|>")[0]  # WTF
+            # self.flags["last_word"] = just_generated.split("<|start_header_id|>")[0]  # 뭔가 잘못된거같아서 수정함
             self.flags["stop_reason"] = "new_word"
             return True
 
@@ -330,6 +646,7 @@ class Translator:
         다음 Translation Step 넘어가도록 프롬프트 업데이트 + 번역생성 수행
         '''
         self.flags["partial_target"] = partial_target
+
         prompt = build_full_prompt(partial_source, partial_target, background=self.background)
 
         if verbose:
@@ -367,6 +684,10 @@ class Translator:
         '''
         실제 번역 수행하는 핵심 메소드
         '''
+
+        ############################################################################
+        self.update_background_info(partial_source_lst)
+        ############################################################################
 
         self.flags["source_finished"] = source_finished  # 원문 번역 완료 여부
         self.flags["stop_reason"] = None  # _generat() 정지이유 플래그
@@ -612,24 +933,33 @@ class Agent(SpeechToTextAgent):
         # self.asr_model = Asr(ASR_MODEL_NAME, DEVICE, SRATE)
         self.asr_model = AsrJAX(ASR_MODEL_NAME, DEVICE, SRATE)
         # self.asr_model = AsrOpenaiWhisper(ASR_MODEL_NAME, DEVICE, SRATE)
+        self.deduplicated_list_of_words = []
+        self.history_list_of_words = []
+        self.background_dict_backup = {
+            "topic": "",
+            "named_entities": []
+        }
         self._reset()
 
     def _set_background(self, background):
         """the evaluator sets it when path to backgrounds is provided as a CLI argument"""
-        self.translator.background = background  # 배경정보 Translator LLM에 제공하기 위한 변수
+        self.translator.background = background  # Background Information을 Translator LLM 인스턴스에 저장
+        self.translator.history_words = self.history_list_of_words  # 지금까지 ASR로 전달받은 전체 입력 단어들 리스트
 
     def _save_asr_and_translation(self):
         with open(f"{args.output}/asr.log", "a") as f:
             f.write(" ".join(self.deduplicated_list_of_words) + "\n")
         with open(f"{args.output}/translation.log", "a") as f:
             f.write(" ".join(self.translator.partial_target) + "\n")
+        self.background_dict_backup = self.translator.background_dict
 
     def _reset(self):
         if verbose:
             cprint("resetting translator", color="red", attrs=["bold"])
-        
+        self.history_list_of_words.extend(self.deduplicated_list_of_words)
         # Translator LLM 인스턴스 변수 선언
         self.translator = Translator(function_words=self.function_words, generation_kwargs=self.generation_kwargs)
+        self.translator.background_dict = self.background_dict_backup
 
         self.deduplicated_list_of_words = []  # 새로 ASR 해온 단어들이 차곡차곡 들어가는 리스트임
         self.first_batch = True  # WTF
